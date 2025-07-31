@@ -31,4 +31,14 @@ A trip to Ikea, a new shadowbox in hand, and a new roll of one way mirror film, 
 
 <h1>Pi Zero 2 W Mirror Rev 3</h1>
 
-*Write up coming soon! Probably!*
+Promptly after the death of the netbook board, I got a replacement; a Raspberry Pi Zero 2 W. Since nothing about the housing was broken, it was a smooth transition. Fortunately I had backed up the main config file, so it was just a matter of cloning the modules again and getting the Pi into place. Not much else to say. It's still hanging in my kitchen, working just fine after a 2GB swapfile.
+
+<div align="center">
+  <img width="659" height="879" alt="image" src="https://github.com/user-attachments/assets/1b713cbf-b340-4f9c-a6dc-7d485227f0f4" />
+  <p align="center"> Yay</p>
+</div>
+
+<div align="center">
+  <img width="659" height="879" alt="image" src="https://github.com/user-attachments/assets/36270f6c-e5f1-4f3d-b9ec-085e727de919" />
+  <p align="center">Internals ain't pretty, but it's lightweight and won't move anywhere.</p>
+</div>
