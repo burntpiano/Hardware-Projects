@@ -14,7 +14,7 @@ Netgear R6400v2 Router - 1 WAN Port, 4 LAN Ports - Static IPv4: 192.168.40.6 - H
 
 TP-Link Deco X60 - 2 Ethernet Ports - Static IPv4: 192.168.10.9 - Firmware: Stock
 
---
+---
 
 Server Hardware:
 
