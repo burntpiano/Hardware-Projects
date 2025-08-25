@@ -1,4 +1,4 @@
-Networking Hardware:
+### Networking Hardware:
 
 Raspberry Pi 4 Model B 8GB - 1 Native Ethernet Port as LAN, 1 TP-Link UE300 USB 3 to Ethernet as WAN - Static 
 
@@ -16,7 +16,7 @@ TP-Link Deco X60 - 2 Ethernet Ports - Static IPv4: 192.168.10.9 - Firmware: Stoc
 
 ---
 
-Server Hardware:
+### Server Hardware:
 
 2 Lenovo Thinkcentre M700 Tinies - CPU: i3-6400T - Memory: 24GiB
 
