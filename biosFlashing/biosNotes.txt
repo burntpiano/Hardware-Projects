@@ -1,0 +1,160 @@
+relevant laptop specifications:
+
+Lenovo Thinkpad P52
+Motherboard: EP 520 NM-B562 Rev 1.0
+GPU: Intel i7 8850H
+CPU: NVIDIA Quadro P1000
+NM-B561 REV 1.0
+BIOS Chip (32MB): MX25L25673G
+BIOS Chip 2 (8MB): 25Q80DVNIG
+
+making sure that anti-tamper/anti-intruder switch is still taped. has never been removed.
+no ac, and no main battery is plugged in
+soic8 clip and jumper wires (10cm in length) are properly connected to GPIO pins
+jumper wires from GPIO are properly connected to soic8 clip as such:
+
+	Pin # 	25xx signal 	RPi(GPIO)		Color (for my own reference)
+	1 	CS 		24 (GPIO 8 CE0)		Blue
+	2 	MISO 		21 (GPIO 10 MISO)	Green
+	3 	WP# 		(not used)
+	4 	GND 		25 (Ground)		Black
+	5 	MOSI 		19 (GPIO 9 MOSI)	Orange
+	6 	CLK/SCK		23 (GPIO 11 SCLK)	Brown
+	7 	HOLD# 		(not used) 			
+	8 	VCC 		1 3.3V Power		Red
+
+	[NOTE:the not used pins are left empty or floating. i am unsure if this if this is what is causing so many problems. i have read this can introduce noise into the reading/writing/erasing process. (i can fix this if need be with soldering or a different method)]
+place pin one of soic8 clip onto pin one of the MX25L25673G BIOS chip ensuring a solid connection is made
+turn on raspberry pi 4
+ssh into pi from main pc
+recompiled flashrom to the newest version as i believe it was an older version (1.3 i believe is what's included in the raspbian repo, but i am now on 1.6.0, the latest)
+using command:
+	sudo ./flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=32768
+with the output of:
+	Found Macronix flash chip "MX25L25635F/MX25L25645G" (32768 kB, SPI).
+	This chip may contain one-time programmable memory. flashrom cannot read
+	and may never be able to write it, hence it may not be able to completely
+	clone the contents of this chip (see man page for details).
+	===
+	This flash part has status UNTESTED for operations: WP
+	The test status of this chip may have been updated in the latest development
+	version of flashrom. If you are running the latest development version,
+	please email a report to flashrom@flashrom.org if any of the above operations
+	work correctly for you with this flash chip. Please include the flashrom log
+	file for all operations you tested (see the man page for details), and mention
+	which mainboard or programmer you tested in the subject line.
+	You can also try to follow the instructions here:
+	https://www.flashrom.org/contrib_howtos/how_to_mark_chip_tested.html
+	Thanks for your help!
+	No operations were specified.
+knowing that the chips it was identified as (MX25L25635F/MX25L25645G) is within the same family as the one in the P52 (MX25L25673G) and the only difference between the MX25L25673G and the MX25L25635F/MX25L25645G is the **73G has default quad I/O enable and cannot be changed [source: https://www.elnec.com/en/device/Macronix/MX25L25673G%20%5BSOP8%5D%20%28Quad%20I%2AO%29/]
+the message regarding untested for operations WP is in reference to flashrom being able to modify/read write protected regions of the chip. i am unsure if this makes a difference or not as i have reflashed the original BIOS multiple times without issue.
+now that the chip has been read and we know the limitations of flashrom are WP operations, i decided to drop the spi bus speed down to 2000kHz instead of 32768kHz to ensure the read/write is done properly
+i then use the chip erase command (OPCODE 0xc7):
+	sudo ./flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=2000 -E
+output is:
+	Erase/write done from 0 to 1ffffff
+following the erase command, i use the write command:
+	sudo ./flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=2000 -w biosfinal.bin
+output is:
+	Reading old flash chip contents... done.
+	Updating flash chip contents... Erase/write done from 0 to 1ffffff
+	Verifying flash... VERIFIED.
+as you can see, it reads the old chip bios, does a full chip erase beforehand, and verifies the flash after writing
+as a precaution, i will verify the chip contents again from the freshly used bios file:
+	sudo ./flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=2000 -v ~/flashrom/builddir/biosFiles/biosfinal.bin
+output:
+	Verifying flash... VERIFIED
+no errors are thrown so i will proceed with the post/boot process
+the board is flipped and the display cables are plugged back in to the motherboard
+one ram chip is inserted into the first slot (the one closest to the motherboard by the fans)
+the cmos battery is plugged back into the board
+after about 30 seconds, the lenovo splash screen appears followed by BIOS error code 0271: check date and time settings. obviously because the CMOS has been reset
+i hit escape and allow the machine to boot into windows 10
+now, here's where i will look in device manager to see if intel management engine #1 is active, to which it is
+as an extra precaution, i will allow the machine to run for 30 minutes (doing nothing to reduce any stress on the CPU)
+if the machine abruptly shuts down, then my intel management engine region is corrupt in my backup bios which means all 3 backups are corrupt as the checksums are all the same. this is doubtful of the problem since the machine boots and posts just fine without errors.
+
+things to note as the machine runs: 
+
+the machine reboots after AC adapter is plugged in and posts after 30 seconds
+fans periodically spin up to max speed, then slow down to a full stop. from my understanding, the IME controls the fan speed
+device manager in windows lists intel management engine interface #1 without error
+
+believing everything is fine, i boot down windows and it updates
+
+i let the laptop rest overnight. when i go to boot it the next morning, to my dismay, i get nothing from the display and there's no movement from the fans.
+in an attempt to get the machine to boot again, i unplug the ac adapter, and hold the power button for 10 seconds followed by the cmos battery uplugged with the power button held for 10 seconds
+the fans start then stop and the power button flashes once to indicate a reboot, then the fans and stop again with no display the entire time
+in an attempt to hear what the machine is telling me, i plug the speakers back in and reboot by unplugging and plugging the AC adapter in
+after about 15 or so seconds, i'm greeted by 4 beeps, followed by a reboot and then 2 beeps. still no display
+force reboot with AC adapter, just 2 beeps now
+out of curiosity, i check the taped over anti-tamper/anti-intruder switch. the tape had become soft and pliable due heat and allowed the switch to turn to the upright position
+pressing the tape back down i attempt to boot again, this time seeing the backlight of the display come on, and a very faint and dim Lenovo splash screen followed by nothing
+i flip the board over and replace the piece of electrical tape with a new piece making sure the lever is pressed down
+i plug in the AC adapter to start the machine with the speakers back in, 2 beeps
+because the anti-intruder switch was flipped by the lack of support from the tape, the machine now has logged an intrusion event and won't boot without all peripherials plugged in, or so i guess
+in an attempt to get it to even post, i cleared the cmos and plugged it back in, the backlights of the keyboard lighting up, and no beeps
+unplugging the cmos, holding the power button to clear it, then plugging it back in lights the keyboard up, specifically the escape, f1, and f4 keys, 30 seconds later it reboots to no beeps or display
+i will attempt to reflash the bios with the original bios file to see if any changes occur, i suspect that the windows update or the anti-tamper/anti-intruder switch had something to do with it 
+
+i will be modifing the way i flash chips via method 1.B detailed below (breadboard) as i don't want to go through the hassle of soldering when it is a somewhat dangerous operation [lead exposure to myself and others, flux fumes and no proper ventelation, small work space]
+i will be using dupont ribbon cables (jumper cables), and no solid core wires as i do not have any
+
+after aquiring a breadboard to properly wire the soic8 clip, i verified with a dell inspiron donor board i had
+{photo}
+i then attach the clips, boot the raspberry pi, shell into it form my main computer and do a full erase chip command:
+	sudo flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=2000 -E
+with the output of:
+	Erase/write done from 0 to 1ffffff
+after a successful erase, i then reflash the original bios to the chip using:
+	sudo flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=8000 -w biosfinal.bin
+output:
+	Reading old flash chip contents... done.
+	Updating flash chip contents... Erase/write done from 0 to 1ffffff
+	Verifying flash... VERIFIED.
+clearing the CMOS prior to plugging in the adapter, i am greeted by 4 beeps, followed by a reboot and 2 beeps but no beep
+cpu is receiving power as indicated by warmth of the heatsink
+
+things to note:
+	the original bios was flashed, and no other flashes took place overnight
+	the machine was shutdown normally and windows updated before shutting down via cmd.exe with command shutdown /s (should have been \s, but it should have still initiated a full shutdown)
+	if i recall correctly, the machine was left plugged in, but i could be mistaken
+
+things that i believe could be possibly prohibiting a successful flash of the patched BIOS:
+
+1. the floating WP# and HOLD#:
+	from my research into using a raspberry pi as an spi programmer, these pins (WP# and HOLD#) need to be connected to VCC to recieve a 3.3V signal, despite not being used. this is clearly stated on the raspberry pi documentation from flashrom (https://www.flashrom.org/user_docs/raspberry_pi.html). further research shows that the empty pins on the soic8 clip can recieve stray RF signals and interfere with the reading/writing/erasing process. every successful dump, flash, read and write has been luck that it didn't pick up and interfere with the process. this can be fixed by different means:
+		A. using a solder prototype board the soic8 adapter would be placed in the bread board and soldered. jumper wires would then be soldered to the corresponding pin number, taking care to bridge pins 3 and 7 (WP and HOLD) to pin 8 (VCC) as to not leave those pins on the soic8 floating, but to have them still receive 3.3V.
+
+		SOIC8 Pinout		RPi Pin		RPi Pin Function
+		pin 1 - CS 	--> 	24 		--> (GPIO 8 CE0)
+		pin 2 - MISO 	--> 	21 		--> (GPIO 10 MISO)
+		pin 3 - WP 	--> 	1 		--> 3.3V Power
+		pin 4 - GND 	--> 	25 		--> (Ground)
+		pin 5 - MOSI 	--> 	19 		--> (GPIO 9 MOSI)
+		pin 6 - CLK/SCK -->	23 		--> (GPIO 11 SCLK)
+		pin 7 - HOLD	-->	1		--> 3.3V Power
+		pin 8 - VCC	-->	1 		--> 3.3V Power
+
+		B. breadboard, same as above but no soldering needed
+		
+		C. either 2 options listed above, but with a raspberry pi pico and different GPIO pinout
+
+		SOIC8 Pinout		RPi Pin		RPi Pin Function
+		pin 1 - CS 	--> 	7 		--> (SPI0 CS)
+		pin 2 - MISO 	--> 	6 		--> (SPI0 RX)
+		pin 3 - WP 	--> 	36		--> 3.3V Power
+		pin 4 - GND 	--> 	38 		--> Ground
+		pin 5 - MOSI 	--> 	5 		--> (SPI0 TX)
+		pin 6 - CLK/SCK -->	4 		--> (SPI0 SCK)
+		pin 7 - HOLD	-->	36		--> 3.3V Power
+		pin 8 - VCC	-->	36		--> 3.3V Power
+		
+		D. taking the jumper cables from WP, HOLD and VCC, stripping them 3mm, twisting and soldering them to a female jumper cable. secure and insulate/shield with heat tubing. this would ensure that WP and HOLD recieve 3.3v.
+		
+2. Unable to keep AC and battery plugged in while flashing:
+	due to having the motherboard removed from the housing for easier access to the BIOS chip, it's difficult and puts strain on the power adapter and cable to the power port when i have to flip the board back over. the battery will also certainly become unplugged during the flip as well.
+
+3. battery is not fully charged:
+	currently i have the battery charging to ensure that it's fully charged when i boot from the patched P52-0.bin BIOS
